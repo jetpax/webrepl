@@ -1,0 +1,248 @@
+Network Working Group                                       J.E.Peace
+Request for Comments: 9999                                MicroPython
+Category: Informational                                 November 2025
+
+                     WebREPL Protocol Specification
+
+Status of this Memo
+
+   This memo provides information for the MicroPython community.  It does
+   not specify an Internet standard of any kind.  Distribution of this
+   memo is unlimited.
+
+Abstract
+
+   WebREPL is a protocol for accessing a remote Python REPL (Read-Eval-
+   Print Loop) and performing file transfer operations over a WebSocket
+   connection.  It is primarily used with MicroPython devices.  This
+   document describes the WebREPL protocol, including connection
+   establishment, authentication, and the binary frame format for file
+   transfers.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . . . 2
+   2.  Connection and Authentication . . . . . . . . . . . . . . . . . 2
+       2.1.  Connection  . . . . . . . . . . . . . . . . . . . . . . . 2
+       2.2.  Authentication  . . . . . . . . . . . . . . . . . . . . . 2
+   3.  Protocol Data Units (PDUs)  . . . . . . . . . . . . . . . . . . 3
+       3.1.  File Transfer Request Header  . . . . . . . . . . . . . . 3
+       3.2.  Response Codes  . . . . . . . . . . . . . . . . . . . . . 4
+   4.  Operations  . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+       4.1.  PUT_FILE (Upload) . . . . . . . . . . . . . . . . . . . . 4
+       4.2.  GET_FILE (Download) . . . . . . . . . . . . . . . . . . . 5
+       4.3.  GET_VER (Get Version) . . . . . . . . . . . . . . . . . . 5
+   5.  Terminal Mode (REPL)  . . . . . . . . . . . . . . . . . . . . . 6
+   6.  Implementation Notes  . . . . . . . . . . . . . . . . . . . . . 6
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . . . 6
+
+1.  Introduction
+
+   WebREPL is a protocol for accessing a remote Python REPL (Read-Eval-
+   Print Loop) and performing file transfer operations over a WebSocket
+   connection.  It is primarily used with MicroPython devices.
+
+   The protocol supports two concurrent modes of operation over the same
+   WebSocket connection:
+
+   1.  Terminal Mode: For interactive REPL access.
+   2.  File Transfer Mode: For uploading and downloading files.
+
+2.  Connection and Authentication
+
+2.1.  Connection
+
+   The client establishes a standard WebSocket connection to the server.
+
+   o  URL Scheme: "ws://" 
+   o  Port: Typically 8266 (default for ESP8266/ESP32 MicroPython).
+
+2.2.  Authentication
+
+   Upon connection, the server may require authentication.
+
+   1.  The server sends a password prompt (e.g., "Password: ") as a text
+       frame.
+   2.  The client must send the password followed by a carriage return
+       ("\r" or "\n") as a text frame.
+   3.  If authentication is successful, the server enters the REPL mode
+       and typically sends a welcome message (e.g., "WebREPL connected").
+
+3.  Protocol Data Units (PDUs)
+
+   The protocol uses WebSocket frames.
+
+   o  Text Frames: Used for Terminal Mode (REPL input/output).
+   o  Binary Frames: Used for File Transfer Mode.
+
+   The WebREPL protocol uses specific signatures ("Magic Bytes") within
+   Binary Frames to validate the application-layer protocol and ensure
+   directionality.
+
+   o  "WA" (0x57 0x41): Client-to-Server (Request)
+   o  "WB" (0x57 0x42): Server-to-Client (Response)
+
+3.1.  File Transfer Request Header
+
+   All file transfer operations begin with a request header sent by the
+   client.  The header is a fixed-size binary structure.
+
+   Format (Little Endian):
+
+      <2sBBQLH64s
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |   Signature   |    OpCode     |   Reserved    |               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+               +
+     |                                                               |
+     +                           Reserved                            +
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                           File Size                           |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |          Name Length          |                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+     |                                                               |
+     +                                                               +
+     |                           Filename                            |
+     +                          (64 bytes)                           +
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Fields:
+
+   Signature:   2 bytes. Must be "WA" (0x57, 0x41).
+   OpCode:      1 byte. Operation Code.
+   Reserved:    1 byte. Set to 0.
+   Reserved:    8 bytes. Set to 0.
+   File Size:   4 bytes (uint32). Size of the file (for PUT) or 0 (for
+                GET).
+   Name Length: 2 bytes (uint16). Length of the filename.
+   Filename:    64 bytes. Filename (padded with zeros if < 64).
+
+   Total Size: 82 bytes.
+
+   Operation Codes:
+
+   1: PUT_FILE (Client -> Server)
+   2: GET_FILE (Server -> Client)
+   3: GET_VER (Get Protocol Version)
+
+3.2.  Response Codes
+
+   The server responds to requests with a status code.
+
+   Format (Little Endian):
+
+      <2sH
+
+   Fields:
+
+   Signature:     2 bytes. Must be "WB".
+   Response Code: 2 bytes (uint16). 0 for Success, non-zero for Error.
+
+4.  Operations
+
+4.1.  PUT_FILE (Upload)
+
+   Transfers a file from Client to Server.
+
+   1.  Request: Client sends a Binary Frame containing the Request
+       Header.
+       *  OpCode: 1
+       *  File Size: Size of the file in bytes.
+       *  Filename: Name of the destination file.
+
+   2.  Initial Response: Server sends a Binary Frame with a Response
+       Code.
+       *  If Code != 0, the operation is aborted.
+
+   3.  Data Transfer: Client sends the file data in one or more Binary
+       Frames.
+       *  The data is typically sent in chunks (e.g., 1024 bytes).
+
+   4.  Final Response: After receiving all data (based on File Size),
+       the server sends a final Binary Frame with a Response Code
+       indicating success or failure of the write operation.
+
+4.2.  GET_FILE (Download)
+
+   Transfers a file from Server to Client.
+
+   1.  Request: Client sends a Binary Frame containing the Request
+       Header.
+       *  OpCode: 2
+       *  File Size: 0
+       *  Filename: Name of the source file.
+
+   2.  Initial Response: Server sends a Binary Frame with a Response
+       Code.
+       *  If Code != 0, the operation is aborted.
+
+   3.  Flow Control & Data Transfer:
+       *  Client ACK: Client sends a Binary Frame containing a single
+          byte 0x00 to request the next chunk.
+       *  Server Data: Server responds with a Binary Frame:
+          -  Bytes 0-1: Chunk Size (uint16, Little Endian).
+          -  Bytes 2-N: File Data (N = Chunk Size).
+       *  Loop: This ACK -> Data loop continues until the server sends a
+          Chunk Size of 0.
+
+   4.  Final Response: After the empty chunk (Size 0), the server sends
+       a final Binary Frame with a Response Code.
+
+4.3.  GET_VER (Get Version)
+
+   Retrieves the protocol version.
+
+   1.  Request: Client sends a Binary Frame containing the Request
+       Header.
+       *  OpCode: 3
+
+   2.  Response: Server sends a Binary Frame containing 3 bytes.
+       *  Byte 0: Protocol Version?
+       *  Byte 1-2: ? (Usually 0)
+
+5.  Terminal Mode (REPL)
+
+   o  Input: Characters typed by the user are sent as Text Frames to the
+      server.
+   o  Output: Output from the REPL is sent as Text Frames from the
+      server to the client.
+   o  Control Characters: Standard VT100/ANSI escape sequences are
+      supported and passed through.
+
+   o  REPL Modes: The MicroPython REPL supports two modes, which are
+      controlled by sending specific control characters as Text Frames:
+
+      1. Friendly REPL (Default): The standard interactive Python prompt
+         (>>>). Supports auto-completion, history, etc.
+         - Enter via: Ctrl-B (0x02)
+
+      2. Raw REPL: A simplified mode designed for automated tools. It
+         disables echo and auto-completion.
+         - Enter via: Ctrl-A (0x01)
+         - Soft Reset: Ctrl-D (0x04)
+         - Paste Mode: Ctrl-E (0x05)
+
+   Note: These modes are part of the MicroPython REPL application layer
+   and are transmitted transparently over the WebREPL Text Frame channel.
+   They do not affect the Binary Frame channel used for file transfers.
+
+6.  Implementation Notes
+
+   o  Concurrency: The server must handle Text Frames (REPL) and Binary
+      Frames (File Transfer) potentially interleaving, although
+      typically file transfers block the REPL.
+   o  Endianness: All multi-byte integers in the binary protocol are
+      Little Endian.
+   o  Encoding: Filenames and text data should be UTF-8 encoded.
+
+7.  Security Considerations
+
+   The WebREPL protocol uses a simple password-based authentication
+   mechanism over the WebSocket connection.  If used over unencrypted
+   HTTP (ws://), the password is sent in cleartext (though inside a
+   WebSocket frame). 
