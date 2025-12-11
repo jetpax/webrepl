@@ -39,6 +39,7 @@ This document specifies a multiplexing protocol for WebREPL communication over W
 The legacy WebREPL protocol provides REPL access and file transfer over a single WebSocket connection using a combination of text and binary frames. Its message formats and multiplexing model are fixed and narrowly scoped, which limits extensibility for use cases requiring structured data exchange, asynchronous notifications, or real-time progress reporting.
 
 The WebREPL Binary Protocol (WBP) defines a new protocol intended to supersede these mechanisms. WBP provides the following properties:
+
 1.	Channelized Transport — Defines a multiplexing model supporting up to 255 independent logical channels within a single WebSocket connection.
 2.	Binary Message Encoding — All WBP messages use WebSocket binary frames (opcode 0x02; RFC 6455) with CBOR-encoded payloads. No text frames or legacy magic-byte formats are used.
 3.	TFTP-Semantic File Transfer — File operations are performed using TFTP semantics as defined in RFC 1350, RFC 2347, RFC 2348, and RFC 2349, including block-structured transfer, acknowledgements, retransmission, and error signalling.
