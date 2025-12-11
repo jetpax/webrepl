@@ -1,11 +1,11 @@
-# WebREPL Channelized Binary (WCB) Protocol Specification
+# WebREPL Binary Protocol (WBP) Specification
 
-**Protocol Name:** WebREPL CB Protocol (WCB)  
-**Subprotocol Identifier:** `webrepl.cb.v1`  
+**Protocol Name:** WebREPL Binary Protocol (WBP)  
+**Subprotocol Identifier:** `WebREPL.binary.v1`  
 **Status:** Draft  
 **Version:** 1.0  
 **Date:** December 2025  
-**Author:** Jonathan Peace, Scripto Studio
+**Author:** Jonathan E. Peace
 
 ---
 
@@ -36,20 +36,20 @@ This document specifies a multiplexing protocol for WebREPL communication over W
 
 ### 1.1 Background
 
-WebeRepl-CB (WebREPL Channelized Binary or just WCB) is based on the principle that WebRepl is used almost exclusively with a web browser client, and in order to provide a rich UI, the client may want to exchange data with the server 'out of band'.  WCB is also future-looking, providing support for rendering multiple simultaneous terminal sessions. 
-
-The legacy WebREPL protocol multiplexed different message types using:
+The legacy WebREPL protocol multiplexes different message types using:
 - WebSocket Text frames for terminal I/O
 - Binary frames with "WA"/"WB" signatures for file transfers
 
-This approach had limitations:
+This approach has limitations:
 - No support for binary bytecode (`.mpy`) execution
 - 82-byte fixed headers for file transfers
 - 64-character filename limits
 - Limited extensibility
 - Complex state machine for clients
 
-WCB adds several features to address these legacy protocol issues:
+WebREPL Binary Protocol (WBP) is based on the principle that WebREPL is used almost exclusively with a web browser client, which is capable of providing a rich UI. To do this, client may want to exchange data efficiently with the server 'out of band', for example update the UI, or to provide extended functionality using MicroPython as an API. 
+
+WBP adds several features to address these legacy protocol issues:
 1. **Channelized**: Messages are multiplexed across 255 independent channels
 2. **Binary**: Uses WebSocket Binary mode (0x02 see RFC6455) with CBOR encoding instead of text frames and magic bytes
 3. **TFTP-based File Transfers**: File operations use proven TFTP semantics (RFC 1350, 2347, 2348, 2349) with block-based transfers, ACKs, and error handling for reliable, resumable file operations
@@ -58,14 +58,15 @@ WCB adds several features to address these legacy protocol issues:
 
 ### 1.2 Protocol Name Options
 
-This document proposes the **WebREPL Channelized Binary Protocol** or **WCB**.
+This document proposes **WebREPL Binary Protocol** or **WBP**.
 
-For this specification, we use **WCB** and the subprotocol identifier `webrepl.cb.v1`.
+For this specification, we use **WBP** and the subprotocol identifier `WebREPL.binary.v1`.
 
 ---
 
 ## 2. Design Goals
 
+The overriding gola ow WBP is to 
 1. **Compactness**: Minimize overhead for high-frequency messages using positional arrays
 2. **Binary Support**: Native support for `.mpy` bytecode and binary file data
 3. **Extensibility**: Allow optional trailing fields for future features
@@ -80,8 +81,9 @@ For this specification, we use **WCB** and the subprotocol identifier `webrepl.c
 
 ### 3.1 Transport
 
-All communication uses **WebSocket Binary Frames** (RFC 6455 opcode 0x2). Text frames are never used.
+All communication uses **WebSocket Binary Frames** (RFC 6455 opcode 0x2). 
 By definition, this means frames are delivered reliably, in-order, and without duplicates.
+Text frames are never used, which allows the protocol to coexist with text based websocket protocols (such as DAP) on the same port 
 
 
 ### 3.2 Encoding
@@ -216,7 +218,7 @@ Channel 0 is reserved exclusively for system events and logs.
 
 ```
 // Welcome message
-[0, 3, {"welcome": "Welcome to MicroPython WEBREPL!"}]
+[0, 3, {"welcome": "Welcome to MicroPython WebREPL!"}]
 
 // Device status (application-specific)
 [0, 3, {"heap": 123456, "uptime": 3600, "rssi": -65}]
@@ -809,12 +811,12 @@ Clients negotiate the protocol using the WebSocket subprotocol mechanism:
 **Client Request:**
 
 ```http
-GET /webrepl HTTP/1.1
+GET /WebREPL HTTP/1.1
 Host: 192.168.4.1
 Upgrade: websocket
 Connection: Upgrade
 Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-Sec-WebSocket-Protocol: webrepl.cb.v1, webrepl.text.v1
+Sec-WebSocket-Protocol: WebREPL.binary.v1, WebREPL.text.v1
 Sec-WebSocket-Version: 13
 ```
 
@@ -825,7 +827,7 @@ HTTP/1.1 101 Switching Protocols
 Upgrade: websocket
 Connection: Upgrade
 Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
-Sec-WebSocket-Protocol: webrepl.cb.v1
+Sec-WebSocket-Protocol: WebREPL.binary.v1
 ```
 
 ### 7.2 Authentication Flow
@@ -1338,7 +1340,7 @@ const EVENT = {AUTH: 0, AUTH_OK: 1, AUTH_FAIL: 2, INFO: 3, LOG: 4};
 
 class WebREPL {
   constructor(url) {
-    this.ws = new WebSocket(url, ['webrepl.cb.v1']);
+    this.ws = new WebSocket(url, ['WebREPL.binary.v1']);
     this.ws.binaryType = 'arraybuffer';
     this.ws.onmessage = this.onMessage.bind(this);
     this.handlers = {channel: new Map(), event: new Map()};
@@ -1590,7 +1592,7 @@ class WebREPL {
 }
 
 // Usage
-const repl = new WebREPL('ws://192.168.4.1/webrepl');
+const repl = new WebREPL('ws://192.168.4.1/WebREPL');
 
 await repl.authenticate('secret');
 
@@ -1695,14 +1697,14 @@ This means M2M helpers can simply use `print(json.dumps(...))` and the output au
 Clients can detect protocol support via subprotocol negotiation:
 
 ```javascript
-const ws = new WebSocket('ws://device/webrepl', [
-  'webrepl.cb.v1',      // Preferred
-  'webrepl.text.v1'     // Legacy
+const ws = new WebSocket('ws://device/WebREPL', [
+  'WebREPL.binary.v1',      // Preferred
+  'WebREPL.text.v1'     // Legacy
 ]);
 
 ws.onopen = () => {
-  if (ws.protocol === 'webrepl.cb.v1') {
-    useWCB();
+  if (ws.protocol === 'WebREPL.binary.v1') {
+    useWBP();
   } else {
     useLegacy();
   }
@@ -1711,7 +1713,7 @@ ws.onopen = () => {
 
 ### 13.2 Feature Comparison
 
-| Feature | Legacy (WA/WB/WC) | WCB (CBOR) |
+| Feature | Legacy (WA/WB/WC) | WBP (CBOR) |
 |---------|-------------------|------------|
 | **Binary execution** | ❌ | ✅ |
 | **Message overhead** | 4-82 bytes | 4-15 bytes |
@@ -1793,7 +1795,7 @@ Return via status=1:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | Dec 2025 | Initial WCB protocol specification |
+| 1.0 | Dec 2025 | Initial WebREPL Binary Protocol specification |
 
 ---
 
@@ -1805,7 +1807,6 @@ Return via status=1:
 
 ---
 
-**Author Contact:**  
 Jonathan Peace  
-Scripto Studio  
-Email: jep@scripto.studio.com
+Email: jep@alphabetiq.com
+GitHub: [@sjetpax](https://github.com/jetpax)
