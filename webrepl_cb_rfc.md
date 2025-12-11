@@ -66,7 +66,6 @@ For this specification, we use **WBP** and the subprotocol identifier `WebREPL.b
 
 ## 2. Design Goals
 
-The overriding gola ow WBP is to 
 1. **Compactness**: Minimize overhead for high-frequency messages using positional arrays
 2. **Binary Support**: Native support for `.mpy` bytecode and binary file data
 3. **Extensibility**: Allow optional trailing fields for future features
