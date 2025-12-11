@@ -22,7 +22,7 @@ An RFC-style format specification  of the original WebREPL protocol that describ
 - 64-character filename limit
 - Magic bytes: "WA" (client→server), "WB" (server→client)
 
-### 2. [webrepl_cb_rfc.md](webrepl_cb_rfc.md) - WebREPL Channelized Binary (WBP) Protocol
+### 2. [webrepl_binary_protocol_rfc.md](webrepl_binary_protocol_rfc.md) - WebREPL Binary Protocol (WBP)
 
 A modern, next-generation WebREPL protocol using CBOR encoding and channel multiplexing.
 
@@ -76,7 +76,7 @@ Build browser-based development environments for MicroPython devices with:
 
 ## Protocol Comparison
 
-| Feature | Legacy (WA/WB) | WCB (CBOR) |
+| Feature | Legacy (WA/WB) | WBP (CBOR) |
 |---------|----------------|------------|
 | **Binary execution** | ❌ | ✅ |
 | **Message overhead** | 82 bytes | 4-15 bytes |
@@ -116,7 +116,7 @@ webrepl_cli.py -p mypassword ws://192.168.4.1:8266/
 
 ### Implementing WebREPL Binary Protocol
 
-See the detailed examples in [webrepl_cb_rfc.md](webrepl_cb_rfc.md):
+See the detailed examples in [webrepl_binary_protocol_rfc.md](webrepl_binary_protocol_rfc.md):
 - Server implementation (MicroPython)
 - Client implementation (JavaScript)
 - Message format examples
@@ -163,4 +163,4 @@ These specifications are provided for informational purposes to enable interoper
 
 **Status:**
 - `webrepl_rfc.txt`: Informational (describes existing protocol)
-- `webrepl_cb_rfc.md`: Draft (v1.0, December 2025)
+- `webrepl_binary_protocol_rfc.md`: Draft (v1.0, December 2025)
