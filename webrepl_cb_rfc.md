@@ -47,7 +47,9 @@ This approach has limitations:
 - Limited extensibility
 - Complex state machine for clients
 
-WebREPL Binary Protocol (WBP) is based on the principle that WebREPL is used almost exclusively with a web browser client, which is capable of providing a rich UI. To do this, client may want to exchange data efficiently with the server 'out of band', for example update the UI, or to provide extended functionality using MicroPython as an API. 
+WebREPL is typically used with web browser clients, which can support a more advanced user interface than simple terminal emulation.
+The standard WebREPL protocol provides reliable REPL access and file transfer through text-based streams. However, browser-based clients often need additional capabilities — such as real-time progress information, separate status updates, or structured data exchange — that are difficult to implement efficiently within a single text stream.
+The WebREPL Binary Protocol (WBP) introduces a lightweight out-of-band channel for these cases. It allows the client and server to exchange binary or structured data alongside the main REPL stream, without interfering with normal operation. Examples include reporting file transfer progress, sending custom notifications, or using MicroPython functions as a structured API.
 
 WBP adds several features to address these legacy protocol issues:
 1. **Channelized**: Messages are multiplexed across 255 independent channels
