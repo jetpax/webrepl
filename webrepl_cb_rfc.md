@@ -40,16 +40,10 @@ The legacy WebREPL protocol multiplexes different message types using:
 - WebSocket Text frames for terminal I/O
 - Binary frames with "WA"/"WB" signatures for file transfers
 
-This approach has limitations:
-- No support for binary bytecode (`.mpy`) execution
-- 82-byte fixed headers for file transfers
-- 64-character filename limits
-- Limited extensibility
-- Complex state machine for clients
-
 WebREPL is typically used with web browser clients, which can support a more advanced user interface than simple terminal emulation.
 The standard WebREPL protocol provides reliable REPL access and file transfer through text-based streams. However, browser-based clients often need additional capabilities — such as real-time progress information, separate status updates, or structured data exchange — that are difficult to implement efficiently within a single text stream.
 The WebREPL Binary Protocol (WBP) introduces a lightweight out-of-band channel for these cases. It allows the client and server to exchange binary or structured data alongside the main REPL stream, without interfering with normal operation. Examples include reporting file transfer progress, sending custom notifications, or using MicroPython functions as a structured API.
+
 
 WBP adds several features to address these legacy protocol issues:
 1. **Channelized**: Messages are multiplexed across 255 independent channels
