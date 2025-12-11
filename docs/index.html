@@ -83,6 +83,9 @@
             padding: 40px;
             color: #6a737d;
         }
+        #content {
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -105,7 +108,9 @@
 
                 // Render markdown to HTML
                 const html = marked.parse(markdown);
-                document.getElementById('content').innerHTML = html;
+                const contentDiv = document.getElementById('content');
+                contentDiv.innerHTML = html;
+                contentDiv.classList.remove('loading');
             })
             .catch(error => {
                 document.getElementById('content').innerHTML = 

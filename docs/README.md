@@ -17,8 +17,8 @@ This directory contains the files for the GitHub Pages site hosting the WebREPL 
 4. Click **Save**
 
 GitHub Pages will be available at:
-- **HTML version**: `https://jep.github.io/webrepl/`
-- **Markdown source**: `https://jep.github.io/webrepl/webrepl_binary_protocol_rfc.md`
+- **HTML version**: `https://jetpax.github.io/webrepl/`
+- **Markdown source**: `https://jetpax.github.io/webrepl/webrepl_binary_protocol_rfc.md`
 
 ## Testing Locally
 
